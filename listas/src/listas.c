@@ -64,18 +64,22 @@ else{
 }
 
 /**
- *
+ *liberar primeraTarea
  */
-tareaM sacarLaPrimeraTareaDeLaLista(ListaTareas*  Lista) {
-	tareaM primerTarea;
+tareaM* sacarLaPrimeraTareaDeLaLista(ListaTareas*  Lista) {
+	tareaM* primerTarea=(tareaM*)malloc(sizeof(tareaM));
 	lTarea *aux;
 		if (Lista->tamanio!=0){
 		aux=(lTarea*)(Lista->inicio);
 		Lista->inicio=aux->sig;
-		primerTarea.tarea=malloc(strlen(aux->tarea)+1);
-		strcpy(primerTarea.tarea,aux->tarea);
-		primerTarea.bloque=aux->bloque;
-		(Lista->tamanio)--;
+		primerTarea->tarea=malloc(strlen(aux->tarea)+1);
+		strcpy(primerTarea->tarea,aux->tarea);
+		primerTarea->bloque=aux->bloque;
+
+		if(!(--Lista->tamanio)){
+			 Lista->inicio = NULL;
+			 Lista->fin = NULL;
+		}
 		free(aux->tarea);
 		free(aux);
 		}
@@ -86,14 +90,43 @@ return primerTarea;
 
 int main(void) {
 	ListaTareas x;
-	tareaM s;
+	tareaM *s;
+	lTarea * aux;
 	inicializacionListaDeTareas (&x);
 	printf("%p y %p",x.fin,x.inicio);
 	agregarTarea(&x,"Rx",42);
-	agregarTarea(&x,"Rx",42);
-	agregarTarea(&x,"Rx",42);
-	agregarTarea(&x,"Rx",42);
+	agregarTarea(&x,"ra",54);
+	agregarTarea(&x,"RT",98);
+	agregarTarea(&x,"TH",67);
+	aux=x.inicio;
+	printf("el inicio es:%d y %s y el final es:%d y %s",
+			x.inicio->bloque,x.inicio->tarea
+			,x.fin->bloque,x.fin->tarea);
+	while(aux!=NULL){
+		printf("%d y %s\n",aux->bloque,aux->tarea);
+		aux=aux->sig;
+	}
+
 	s=sacarLaPrimeraTareaDeLaLista(&x);
+	printf("%d y %s\n",s->bloque,s->tarea);
+	free(s->tarea);
+	free(s);
+	s=sacarLaPrimeraTareaDeLaLista(&x);
+	printf("%d y %s\n",s->bloque,s->tarea);
+		free(s->tarea);
+		free(s);
+	s=sacarLaPrimeraTareaDeLaLista(&x);
+	printf("%d y %s\n",s->bloque,s->tarea);
+		free(s->tarea);
+		free(s);
+	s=sacarLaPrimeraTareaDeLaLista(&x);
+	printf("%d y %s\n",s->bloque,s->tarea);
+		free(s->tarea);
+		free(s);
+	if(x.fin==NULL && x.inicio==NULL){
+		printf("Todo bien se borro todo\n");
+	}
+
 	printf("tamanio de la lista %d",x.tamanio);
 	return EXIT_SUCCESS;
 }
