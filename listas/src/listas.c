@@ -13,99 +13,87 @@
 #include <string.h>
 
 
-typedef struct _lTareas{
+typedef struct _tareaM{
 	char* tarea;
 	int short bloque;
-	struct _lTareas *sig;
-}lTareas;
+}tareaM;
 
-/**
- * me da el ultimo de la lista de tareas
- */
- lTareas* getElUltimo(lTareas*lista){
-	lTareas* list=lista;
-	lTareas* aux;
-	while(list!=NULL){
-		aux=list;
-		list=list->sig;
-	}
-return aux;
+
+typedef struct _lTarea{
+	char* tarea;
+	int short bloque;
+	struct _lTarea *sig;
+}lTarea;
+
+typedef struct ListaIdentificar {
+  lTarea *inicio;
+  lTarea *fin;
+  int tamanio;
+}ListaTareas;
+
+
+void inicializacionListaDeTareas (ListaTareas *lista){
+  lista->inicio = NULL;
+  lista->fin = NULL;
+  lista->tamanio=0;
 }
 
 //agrega tarea al ultimo
-
-void agregarTarea(lTareas*lista,char*tarea,int bloque){
-lTareas* list=malloc(sizeof(lTareas));
-lTareas* aux;
-list->bloque=bloque;
+void agregarTarea(ListaTareas *lista,char*tarea,int bloque){
+lTarea* list=(lTarea*)malloc(sizeof(lTarea));
 list->tarea=malloc(strlen(tarea)+1);
+list->bloque=bloque;
 strcpy(list->tarea,tarea);
 list->sig=NULL;
-	if(lista!=NULL){
-		aux=getElUltimo(lista);
-		aux->sig=list;
+
+if(lista->tamanio==0){
+	lista->inicio=list;
+	lista->fin=list;
+}
+else{
+	if(lista->tamanio==1){
+		lista->fin=list;
+		lista->inicio->sig=lista->fin;
 	}
-	else
-		lista=list;
-}
-
-
-
-
-lTareas* crearListaDeTareas(char*tarea,int bloque)
-{
-   lTareas* Lista;
-   Lista = (lTareas*) malloc (sizeof(lTareas));
-   Lista->bloque= bloque;
-   Lista->tarea=malloc(strlen(tarea)+1);
-   strcpy(Lista->tarea,tarea);
-   Lista->sig= NULL;
-   return Lista;
-}
-
-
-int tamanioDeListaTareas(lTareas* lista)
-{
-	int inc=0;
-	while(lista!=NULL){
-		lista=lista->sig;
-		inc++;
+	else{
+		lista->fin->sig=list;
+		lista->fin=list;
 	}
-	return inc;
+}
+(lista->tamanio)++;
 }
 
-
-
-
-
+/**
+ *
+ */
+tareaM sacarLaPrimeraTareaDeLaLista(ListaTareas*  Lista) {
+	tareaM primerTarea;
+	lTarea *aux;
+		if (Lista->tamanio!=0){
+		aux=(lTarea*)(Lista->inicio);
+		Lista->inicio=aux->sig;
+		primerTarea.tarea=malloc(strlen(aux->tarea)+1);
+		strcpy(primerTarea.tarea,aux->tarea);
+		primerTarea.bloque=aux->bloque;
+		(Lista->tamanio)--;
+		free(aux->tarea);
+		free(aux);
+		}
+return primerTarea;
+}
 
 
 
 int main(void) {
-
-	/*lTareas * x=malloc(sizeof(lTareas));
-	lTareas * aux;
-
-	if(aux == NULL){
-		printf("noo\n");
-	}*/
-	lTareas * x=crearListaDeTareas("pepe",43);
-	lTareas * aux2=NULL;
-	lTareas * aux;
-	agregarTarea(x,"ppdas",53);
-	agregarTarea(x,"pfasfe",32);
-	/*agregarTarea(x,"pe5",42);
-	agregarTarea(x,"pe3",42);
-	*/
-	aux=x;
-	while(aux!=NULL){
-		printf("la tarea se llama %s\n", aux->tarea);
-		printf("el bloque es %d\n",aux->bloque);
-		aux=aux->sig;
-	}
-	printf("tamanio de la lista %d",tamanioDeListaTareas(aux2));
-
-	free(x->tarea);
-	free(x);
+	ListaTareas x;
+	tareaM s;
+	inicializacionListaDeTareas (&x);
+	printf("%p y %p",x.fin,x.inicio);
+	agregarTarea(&x,"Rx",42);
+	agregarTarea(&x,"Rx",42);
+	agregarTarea(&x,"Rx",42);
+	agregarTarea(&x,"Rx",42);
+	s=sacarLaPrimeraTareaDeLaLista(&x);
+	printf("tamanio de la lista %d",x.tamanio);
 	return EXIT_SUCCESS;
 }
