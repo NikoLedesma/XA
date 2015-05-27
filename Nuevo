@@ -1,0 +1,168 @@
+#include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
+
+#include <poll.h>
+#include <sys/poll.h>
+#include <sys/time.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include "jobTES.h"
+#include "MYSOCK.h"
+#define IP "127.0.0.1"
+#define PUERTOFS "6667"
+#define PACKAGESIZE 1024	// Define cual va a ser el size maximo del paquete a enviar
+
+int socketFS;//socket del file system
+
+void conectarConFS(){
+
+	struct addrinfo hints;
+	struct addrinfo *serverInfo;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;		// Permite que la maquina se encargue de verificar si usamos IPv4 o IPv6
+	hints.ai_socktype = SOCK_STREAM;	// Indica que usaremos el protocolo TCP
+
+	getaddrinfo(IP, PUERTOFS, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+
+
+	//int serverSocket;
+	socketFS = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+
+	connect(socketFS, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	freeaddrinfo(serverInfo);	// No lo necesitamos mas
+
+	int enviar = 1;
+	char message[PACKAGESIZE];
+
+	printf("Hola File...\n\n\n\n\n");
+	pedirBloques("LaPutaMadre.txt");//prueba de solicitud de bloques de un archivo
+
+}
+//todo estructura compuesta por nodo bloque copia * cantidad de bloques
+void pedirBloques( char *nombreArch){
+
+	int tam = strlen(nombreArch)+1;//longitud de la cadena a enviar
+	send(socketFS, &tam, sizeof(int), 0);//primero envio el tamaño y despues el nombre
+	send(socketFS, nombreArch, tam,0);
+
+	int cantidad;//cantidad de bloques a recivir
+	recv(socketFS, &cantidad, sizeof(int), 0);
+	printf("Se recivio:%d\n\n",cantidad);
+
+	int tamanioDeStruct = sizeof(int)*3*cantidad;
+	char* estructura = malloc(tamanioDeStruct);
+	int status = 0;
+	while(1){
+
+		status = recv(socketFS, estructura, tamanioDeStruct, 0);
+		if(status >0){
+			//descerializar
+			// todo repetir por cantidad recivida
+
+				int offset = 0, bloque = 0, nodo = 0, copia = 0;//todo utilizar la estructura de comunicacion
+				memcpy(&bloque, estructura, sizeof(int));
+				offset = offset + sizeof(int);
+				memcpy(&nodo,(estructura + offset), sizeof(int));
+				offset = offset + sizeof(int);
+				memcpy(&copia, (estructura + offset), sizeof(int));
+				printf("Bloque:%d,Nodo:%d,Copia%d",bloque,nodo,copia);
+			break;
+		}
+	}
+}
+
+
+
+#define _PuertoServer  34032
+#define _IpServer  "127.0.0.1"
+
+short int idJobQueHablo[1];
+
+
+void conectarConJobs(){
+		struct sockaddr_in serverADDR,clientADDR;
+		socklen_t longServerADDR=sizeof(serverADDR);
+		socklen_t longClientADDR= sizeof(clientADDR);
+		struct pollfd ufds[3],master[3];///voy a estar recibiendo datos de 9 clientes (como mucho) + 1 servidor
+		nfds_t nfds; //numero de files descriptors
+
+	int sock_server=open_Socket();
+	if(sock_server==-1){
+
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+
+	Configure_Sockaddr(_PuertoServer,_IpServer,&serverADDR);
+	if(bind(sock_server,(struct sockaddr*)&serverADDR,sizeof(serverADDR))==-1){
+
+		perror("bind");
+		exit(EXIT_FAILURE);
+	}
+
+	if(listen(sock_server,5)==-1){
+
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Agregarmos el servidor al array de estructura poll*/
+	nfds=0;
+	master[nfds].fd=sock_server;///ponemos el socket que escucha
+	master[nfds].events=POLLIN ;///ponemos el evento
+	master[nfds].revents=0;///seteamos los eventos a 0
+
+	while(1)
+	{
+		int i,pollResault;
+		memcpy(ufds, master, (nfds+1)*sizeof(struct pollfd));
+		printf("esperamos por un cliente\n");
+		pollResault=poll(ufds,(nfds_t) (nfds+1),-1);//me devuelve la cantidad de descriptores que tuvieron eventos
+		if(pollResault==-1)///poniendo un negativo en _timeout esperamos haste que ocurra algun evento
+		{
+			perror("poll");
+			exit(EXIT_FAILURE);
+		}
+		printf("Se encontraron eventos en %d descriptores\n", pollResault);
+		for(i=0;i<(nfds+1);++i){
+
+			if(ufds[i].revents & POLLIN ){
+
+				if(i == 0){//en este caso se conecta un nuevo cliente
+
+					int sock_talk=accept(sock_server,(struct sockaddr*)&clientADDR,&longClientADDR);
+					if(sock_talk==-1){
+
+						perror("accept");
+						exit (EXIT_FAILURE);
+					}
+					master[++nfds].fd=sock_talk;//primero se incrementa nfds y luego se guarda el socket
+					master[nfds].events=POLLIN ;//activo el flag para la escritura
+					master[nfds].revents=0;
+					//"Se conecto un nuevo cliente:master[nfds] y la cantidad es de nfds"
+				}
+				else{//en este caso algun cliente envio algo
+					//debo averiguar quien eso lo se en la posicion del i
+					idJobQueHablo[1]=ufds[i].fd;//asigno al buffer que tengo que leer el descriptor socket
+				}
+			}///fin del if que pregunta por cada evento
+		}///fin for
+	}///fin while
+}
+
+
+
+int main(int argc,char* argv[]) {
+//	pthread_t coneccionConFS;
+	pthread_t conexionConJobs;
+//	int rhConeccionFile = pthread_create(&coneccionConFS, NULL,conectarConFS, NULL); //hilo que conecta con el FS
+	int rhConexionJobs = pthread_create(&conexionConJobs, NULL,conectarConJobs, NULL); //hilo que conecta con el FS
+//pthread_join(coneccionConFS, NULL);
+	pthread_join(conexionConJobs,NULL);
+	return EXIT_SUCCESS;
+}

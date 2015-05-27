@@ -81,8 +81,6 @@ int main(void) {
 		Configure_Sockaddr(PuertoX,IpX,&dest_addr);
 		connect(client,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr));
 		//recibo
-
-
 		packMaper2 *paquete=malloc(sizeof(packMaper2));
 		recibir_estructura(client,paquete);
 		printf("%s\n",paquete->ip);
