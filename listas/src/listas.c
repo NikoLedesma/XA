@@ -221,8 +221,9 @@ void agregarJobALaListaJ(int idJobCliente,int combiner,t_list* archivoList,t_lis
  * Lista de tareas
  */
 typedef struct _tarea{
-	short int numJob;
-	short int numTarea;
+	short int numJob;//socket
+	short int numTarea;//numero de copia
+	int bloque;
 }elementTarea;
 
 void agregarTareaAListaDeTareas(int numJob,int numTarea,t_list *listaDeTareas){
@@ -304,7 +305,6 @@ int BuscarNodoEnLista(t_list* lista_De_Nodos,char* nodoName){
 		elementNodo *nodo;
 		for(;index<size;index++){
 			nodo=list_get(lista_De_Nodos,index);
-			printf("%s    %s  \n",nodo->nodoName,nodoName);
 			if (!(strcmp(nodo->nodoName,nodoName)))
 				break;
 		}
@@ -321,14 +321,66 @@ void agregarTareaAlNodo(t_list* lista_De_Nodos,char* nodoName,elementTarea tarea
 	elementNodo *nodo;
 	nodo=list_get(lista_De_Nodos,indice);
 	agregarTareaAListaDeTareas(tarea.numJob,tarea.numTarea,nodo->listaDeTareas);
+	list_sort(lista_De_Nodos,closure_comp_elDeMenorTareas);
+}
 
+////
+////esta estructura deberia ser lo que me da el filesystem
+////
+typedef struct _est{
+char* nodoName;
+int copia;
+int bloque;
+}infoFromFF;
+/*
+ * Esto agrega una tarea de una lista, cada elemento de la lista es lo que me dio el
+ * filesystem en el receive , 3 estructuras por 1 copia
+ * devuelve un entero que me avisa la posicion en que se guardo ,si es 0 es porque no agrego tarea alguna
+ * */
+
+
+										//elementos_de_Nodo              //elemento_infoBlock
+int agregarTareaAlNodoCorrespondiente(t_list* lista_De_Nodos,t_list* lista_De_Nodos_From_FF){
+	infoFromFF *bloq;
+	int i,size;
+	elementNodo *foundNode;//nodo encontrado
+	int sizeNode;//tamaño del nodo encontrado
+	int indexNode;//indice
+	size=list_size(lista_De_Nodos_From_FF);///tamaño de la lista que llene con lo q me envio el FF
+	int auxSize=99999;
+	elementNodo *auxNode;
+	for(i=0;i<size;i++){
+		bloq=list_get(lista_De_Nodos_From_FF,i);
+		indexNode=BuscarNodoEnLista(lista_De_Nodos,bloq->nodoName);
+			if(indexNode==-1){//el nodo no se encontro en la lista, por lo tanto se lo agrega a la lista
+							//y se le asigna la tarea
+				elementTarea nuevaTarea;
+				nuevaTarea.numJob=42;//debo buscar una manera de asignarle el id_de_job,que es el socket
+								//que me envio el archivo y yo se lo pase al ff, y elff me respondio
+				nuevaTarea.numTarea=bloq->copia;//el numero de tarea lo identifico como el num de copia
+				agregarNodoALaLista(lista_De_Nodos,bloq->nodoName);
+				agregarTareaAlNodo(lista_De_Nodos,bloq->nodoName,nuevaTarea);
+				break;//salgo del for
+			}
+		foundNode=list_get(lista_De_Nodos,indexNode);///mme devuelve el nodo
+		sizeNode=list_size(foundNode->listaDeTareas);//tamaño del nodo
+		if(sizeNode<auxSize){//si el tamaño del nodo sacado es menor que el del anterior
+		auxSize=sizeNode;
+		auxNode=foundNode;
+		}
+	}
+	if(i==0)
+	perror("la lista_De_Nodos_From_FF esta vacia \n");
+	return(i);
 }
 
 
 
-
-
-
+/*
+t_list* completarLista_From_FF(t_list* lista_De_Nodos_From_FF,infoBLOCK x){
+	infoBLOCK *bloq;
+	bloq=list_get(lista_De_Nodos_From_FF,1);
+}*/
 
 
 
@@ -346,23 +398,36 @@ int main(void) {
 	agregarNodoALaLista(lista_De_Nodos,"NodoA");
 	agregarNodoALaLista(lista_De_Nodos,"NodoB");
 	agregarNodoALaLista(lista_De_Nodos,"NodoC");
+	list_iterate(lista_De_Nodos,mostrarNodo);
+	printf("\n");
+	agregarTareaAlNodo(lista_De_Nodos,"NodoA",tarea);
+	list_iterate(lista_De_Nodos,mostrarNodo);
+	printf("\n");
+	agregarTareaAlNodo(lista_De_Nodos,"NodoA",tarea);
+	list_iterate(lista_De_Nodos,mostrarNodo);
+	printf("\n");
 	agregarTareaAlNodo(lista_De_Nodos,"NodoB",tarea);
-	agregarTareaAlNodo(lista_De_Nodos,"NodoB",tarea);
-	agregarTareaAlNodo(lista_De_Nodos,"NodoB",tarea);
+	list_iterate(lista_De_Nodos,mostrarNodo);
+	printf("\n");
+	agregarTareaAlNodo(lista_De_Nodos,"NodoC",tarea);
+		list_iterate(lista_De_Nodos,mostrarNodo);
+		printf("\n");
+		agregarTareaAlNodo(lista_De_Nodos,"NodoC",tarea);
+			list_iterate(lista_De_Nodos,mostrarNodo);
+			printf("\n");
+			agregarTareaAlNodo(lista_De_Nodos,"NodoC",tarea);
+						list_iterate(lista_De_Nodos,mostrarNodo);
+						printf("\n");
+						agregarTareaAlNodo(lista_De_Nodos,"NodoB",tarea);
+									list_iterate(lista_De_Nodos,mostrarNodo);
+									printf("\n");
 	int i=BuscarNodoEnLista(lista_De_Nodos,"NodoB");
 	elementNodo *nodo;
 	nodo = list_get(lista_De_Nodos,i);
-	printf("El tamaño del nodo es de :%d\n",list_size(nodo->listaDeTareas));
+	printf("El tamaño del nodoB es de :%d\n",list_size(nodo->listaDeTareas));
 	printf("respuesta %s %d\n",(i+1)?"encontro":"no encontro",i);
 
-list_iterate(lista_De_Nodos,mostrarNodo);
 
-	///ordenar
-	list_sort(lista_De_Nodos,closure_comp_elDeMenorTareas);
-list_iterate(lista_De_Nodos,mostrarNodo);
-nodo = list_get(lista_De_Nodos,0);
-printf("%s\n",nodo->nodoName);
-//destruir= destruirTarea;
 
 
 return 1;
